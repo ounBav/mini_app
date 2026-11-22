@@ -12,20 +12,15 @@ const usage = computed(() =>
 
 <template>
   <header class="flex items-center gap-3">
-    <div class="icon-tile h-12 w-12 shrink-0 animate-float" aria-hidden="true">
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" />
-      </svg>
-    </div>
+    <img
+      src="/logo-96.png"
+      alt=""
+      width="48"
+      height="48"
+      decoding="async"
+      class="h-12 w-12 shrink-0 animate-float rounded-full shadow-glow"
+      aria-hidden="true"
+    />
     <div class="min-w-0 flex-1">
       <h1
         class="text-gradient truncate text-[clamp(19px,5.6vw,22px)] font-extrabold leading-tight tracking-tight"
