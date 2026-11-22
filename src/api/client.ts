@@ -3,7 +3,9 @@ import type { ApiErrorDetail, ErrorCode } from '@/types/api'
 
 const DEFAULT_TIMEOUT_MS = 15_000
 
-type DetailExtras = Partial<Pick<ApiErrorDetail, 'retry_after' | 'id' | 'max_duration'>>
+type DetailExtras = Partial<
+  Pick<ApiErrorDetail, 'retry_after' | 'id' | 'max_duration' | 'remaining' | 'max'>
+>
 
 /** Every failure from the API layer. `code` is a server E-* code or a client transport code. */
 export class ApiError extends Error {
@@ -12,6 +14,10 @@ export class ApiError extends Error {
   readonly retryAfter: number
   readonly jobId: string | null
   readonly maxDuration: number | null
+  /** E-QUOTA: downloads left today. */
+  readonly remaining: number | null
+  /** E-TOOMANY: most videos one batch may send. */
+  readonly max: number | null
 
   constructor(code: ErrorCode, status = 0, detail: DetailExtras = {}) {
     super(code)
@@ -21,6 +27,8 @@ export class ApiError extends Error {
     this.retryAfter = Number(detail.retry_after) || 0
     this.jobId = typeof detail.id === 'string' ? detail.id : null
     this.maxDuration = typeof detail.max_duration === 'number' ? detail.max_duration : null
+    this.remaining = typeof detail.remaining === 'number' ? detail.remaining : null
+    this.max = typeof detail.max === 'number' ? detail.max : null
   }
 
   /** Transport-level problems where the server may simply be asleep or unreachable. */
@@ -57,6 +65,8 @@ export interface RequestOptions {
   signal?: AbortSignal
   /** /health is public and must not carry initData. */
   auth?: boolean
+  /** Let the request outlive the page (sent from pagehide when the Mini App closes). */
+  keepalive?: boolean
 }
 
 /** Absolute URL for a server path such as `/api/files/<token>`. */
@@ -125,6 +135,7 @@ export async function request<T>(
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       cache: 'no-store',
       signal: ctrl.signal,
+      ...(opts.keepalive ? { keepalive: true } : {}),
     })
   } catch (err) {
     if (opts.signal?.aborted) throw err // the caller cancelled: let it see the AbortError

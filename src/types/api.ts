@@ -46,6 +46,13 @@ export type ServerErrorCode =
   | 'E-BLOCKED'
   | 'E-GEO'
   | 'E-UNAVAILABLE'
+  // TikTok profile tab (POST /api/tiktok/*)
+  | 'E-USERNAME'
+  | 'E-PROFILE'
+  | 'E-NOVIDEOS'
+  | 'E-SCANGONE'
+  | 'E-TOOMANY'
+  | 'E-QUOTA'
 /** Codes produced by the client (transport problems, expired jobs). */
 export type ClientErrorCode =
   | 'E-NETWORK'
@@ -67,6 +74,10 @@ export interface ApiErrorDetail {
   id?: string
   /** /info E-TOOLONG: the server's MAX_DURATION_SEC (null when unlimited). */
   max_duration?: number | null
+  /** E-QUOTA: downloads left today (fewer than the batch asked for). */
+  remaining?: number
+  /** E-TOOMANY: most videos one batch may send. */
+  max?: number
 }
 
 export interface PlatformInfo {
@@ -86,6 +97,10 @@ export interface MeResponse {
   terms_url: string | null
   qualities: Quality[]
   file_ttl_min: number
+  /** TikTok profile tab: "All" lists at most this many videos. Absent on older servers. */
+  profile_max_videos?: number
+  /** TikTok profile tab: most videos one batch may send. */
+  profile_max_send?: number
 }
 
 /** POST /api/info body (InfoIn). */
@@ -154,6 +169,65 @@ export interface JobList {
 export interface CancelResponse {
   id: string
   status: 'cancelling'
+}
+
+/** POST /api/tiktok/scan body (ScanIn). "all" is capped by the server's PROFILE_MAX_VIDEOS. */
+export type ProfileLimit = 10 | 50 | 100 | 'all'
+
+export interface ScanRequest {
+  username: string
+  limit: ProfileLimit
+}
+
+/** One listed video (api._video_view). */
+export interface ProfileVideo {
+  id: string
+  url: string
+  title: string
+  /** Seconds; 0 when unknown (e.g. photo posts). */
+  duration: number
+  thumbnail: string | null
+  /** Epoch seconds. */
+  timestamp: number | null
+  view_count: number | null
+}
+
+/** POST /api/tiktok/scan response. The server keeps it once, until send/discard/expiry. */
+export interface ScanResponse {
+  scan_id: string
+  username: string
+  nickname: string | null
+  limit: ProfileLimit
+  count: number
+  /** "All" stopped at the server cap: the profile may have more videos. */
+  truncated: boolean
+  max_send: number
+  expires_at: string
+  videos: ProfileVideo[]
+}
+
+/** POST /api/tiktok/scan/{scan_id}/send body. */
+export interface SendVideosRequest {
+  video_ids: string[]
+}
+
+export interface BatchItem {
+  video_id: string
+  /** Job id to follow via GET /api/downloads; null when served from the bot's cache. */
+  id: string | null
+  status: 'queued' | 'done' | 'failed'
+}
+
+/** POST /api/tiktok/scan/{scan_id}/send response. */
+export interface SendVideosResponse {
+  username: string
+  items: BatchItem[]
+  queued: number
+}
+
+/** POST /api/tiktok/scan/discard */
+export interface DiscardResponse {
+  discarded: boolean
 }
 
 /** GET /health */

@@ -81,6 +81,50 @@ export const S = {
   another: 'Download another',
   openChat: 'Open chat',
 
+  // Mode tabs
+  modesLabel: 'Download from',
+  modeLink: 'Link',
+  modeProfile: 'TikTok profile',
+
+  // TikTok profile tab
+  profileHeroTitle: 'Pick from a profile,',
+  profileHeroAccent: 'send to Telegram.',
+  profileHeroBody:
+    'Enter a TikTok username, choose how many videos to list, then pick the ones you want.',
+  usernameLabel: 'TikTok username',
+  usernamePlaceholder: '@username',
+  usernameInvalid: 'Use letters, numbers, "_" or "." (like @abc)',
+  clearUsername: 'Clear username',
+  limitLabel: 'Videos to list',
+  limitOption: (limit: number | 'all') => (limit === 'all' ? 'All' : `Last ${limit}`),
+  limitAllHint: (max: number) => `“All” lists up to ${max} of the latest videos.`,
+  search: 'Search',
+  searching: (username: string) => `Listing @${username}’s videos…`,
+  searchingHint: 'Large profiles can take up to a minute.',
+  profileCount: (count: number) => `${count} video${count === 1 ? '' : 's'}`,
+  profileTruncated: 'Showing the latest ones only.',
+  selectedCount: (n: number, max: number) => `${n}/${max} selected`,
+  selectAll: (max: number) => `Select ${max}`,
+  selectNone: 'Clear',
+  selectLimit: (max: number) => `You can send up to ${max} videos at a time.`,
+  selectVideo: (title: string) => `Select video: ${title}`,
+  untitled: 'Untitled video',
+  sendToTelegram: (n: number) => (n ? `Send ${n} to Telegram` : 'Select videos to send'),
+  oneTimeHint: "This list is kept only until you send or close the app. It isn't saved.",
+  newSearch: 'New search',
+  batchTitle: 'Sending to your chat',
+  batchDoneTitle: 'All done',
+  batchBody: 'The bot sends each video to your chat. You can close the app.',
+  batchSummary: (done: number, total: number, failed: number) =>
+    failed ? `${done} of ${total} sent · ${failed} failed` : `${done} of ${total} sent`,
+  batchItem: {
+    queued: 'Waiting',
+    working: 'Downloading…',
+    done: 'Sent',
+    failed: 'Failed',
+  },
+  listCleared: 'List cleared.',
+
   // Error screen
   errorTitle: "Couldn't download this",
   tryAgain: 'Try again',

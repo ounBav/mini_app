@@ -1,5 +1,9 @@
 import type {
   CancelResponse,
+  DiscardResponse,
+  ScanRequest,
+  ScanResponse,
+  SendVideosResponse,
   CreateDownloadRequest,
   CreateDownloadResponse,
   HealthResponse,
@@ -48,4 +52,31 @@ export function cancelDownload(id: string): Promise<CancelResponse> {
 /** Public, unauthenticated file link (Telegram's downloadFile cannot send headers). */
 export function fileUrl(downloadPath: string): string {
   return apiUrl(downloadPath)
+}
+
+/** Listing a profile pages through TikTok's API (up to ~90 s server-side, profiles.SCAN_TIMEOUT). */
+const SCAN_TIMEOUT_MS = 100_000
+
+export function scanProfile(body: ScanRequest, signal?: AbortSignal): Promise<ScanResponse> {
+  return request<ScanResponse>('POST', '/api/tiktok/scan', {
+    body,
+    timeoutMs: SCAN_TIMEOUT_MS,
+    signal,
+  })
+}
+
+export function sendProfileVideos(scanId: string, videoIds: string[]): Promise<SendVideosResponse> {
+  return request<SendVideosResponse>(
+    'POST',
+    `/api/tiktok/scan/${encodeURIComponent(scanId)}/send`,
+    { body: { video_ids: videoIds }, timeoutMs: 30_000 },
+  )
+}
+
+/** Tell the server to forget the listing now. keepalive: it is sent while the page closes. */
+export function discardScan(keepalive = false): Promise<DiscardResponse> {
+  return request<DiscardResponse>('POST', '/api/tiktok/scan/discard', {
+    keepalive,
+    timeoutMs: 5_000,
+  })
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import AnimatedBackground from '@/components/AnimatedBackground.vue'
 import DevBottomBar from '@/components/DevBottomBar.vue'
 import FullScreenState from '@/components/FullScreenState.vue'
@@ -10,17 +10,23 @@ import { useTelegram } from '@/composables/useTelegram'
 import { CONFIG_PROBLEM } from '@/config'
 import { S } from '@/lib/strings'
 import { useDownloadStore } from '@/stores/download'
+import { useProfileStore } from '@/stores/profile'
 import DownloaderView from '@/views/DownloaderView.vue'
+import ProfileView from '@/views/ProfileView.vue'
 
 const tg = useTelegram()
 const store = useDownloadStore()
+const profile = useProfileStore()
 const canRun = tg.isTelegram || tg.isDevMock
 const origin = typeof location !== 'undefined' ? location.origin : ''
 const configProblem = CONFIG_PROBLEM ?? 'missing'
 
 onMounted(() => {
   if (canRun) void store.boot()
+  // Closing the Mini App: the TikTok profile listing is one-time, so tell the server to drop it.
+  window.addEventListener('pagehide', profile.discardOnClose)
 })
+onBeforeUnmount(() => window.removeEventListener('pagehide', profile.discardOnClose))
 </script>
 
 <template>
@@ -111,6 +117,7 @@ onMounted(() => {
         </button>
       </FullScreenState>
 
+      <ProfileView v-else-if="store.mode === 'profile'" />
       <DownloaderView v-else />
     </template>
 

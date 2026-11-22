@@ -48,6 +48,8 @@ type WakeResult = 'awake' | 'woke' | 'blocked' | 'down'
 /** Which operation produced the current error (decides what "Try again" repeats). */
 export type FailedOp = 'info' | 'download' | 'job'
 export type GalleryMode = 'share' | 'chat' | 'none'
+/** Top-level tab: paste a link, or pick videos from a TikTok profile (stores/profile.ts). */
+export type Mode = 'link' | 'profile'
 export type GalleryState = 'idle' | 'loading' | 'ready' | 'failed'
 
 export interface AppError {
@@ -84,6 +86,7 @@ export const useDownloadStore = defineStore('download', () => {
   const error = shallowRef<AppError | null>(null)
   const errorBackStep = ref<Step>('input')
   const toast = ref<string | null>(null)
+  const mode = ref<Mode>('link')
 
   let infoCtrl: AbortController | null = null
   let saving = false
@@ -116,6 +119,20 @@ export const useDownloadStore = defineStore('download', () => {
   )
 
   // ------------------------------------------------------------------ helpers
+  function setMode(next: Mode): void {
+    if (mode.value === next) return
+    tg.haptic('selection')
+    mode.value = next
+  }
+
+  /** Auth problems are app-wide (full-screen states); returns true when one was handled. */
+  function handleAuthError(code: ErrorCode): boolean {
+    if (code === 'E-AUTH') phase.value = 'auth'
+    else if (code === 'E-BANNED') phase.value = 'banned'
+    else return false
+    return true
+  }
+
   function showToast(message: string): void {
     toast.value = message
     if (toastTimer) clearTimeout(toastTimer)
@@ -124,14 +141,7 @@ export const useDownloadStore = defineStore('download', () => {
 
   function setError(err: ApiError | ErrorCode, op: FailedOp): void {
     const e = typeof err === 'string' ? new ApiError(err) : err
-    if (e.code === 'E-AUTH') {
-      phase.value = 'auth'
-      return
-    }
-    if (e.code === 'E-BANNED') {
-      phase.value = 'banned'
-      return
-    }
+    if (handleAuthError(e.code)) return
     error.value = {
       code: e.code,
       op,
@@ -642,6 +652,7 @@ export const useDownloadStore = defineStore('download', () => {
     cancelling,
     error,
     toast,
+    mode,
     // derived
     platforms,
     link,
@@ -673,5 +684,8 @@ export const useDownloadStore = defineStore('download', () => {
     tryLowerQuality,
     tryAudio,
     showToast,
+    setMode,
+    handleAuthError,
+    withWake,
   }
 })

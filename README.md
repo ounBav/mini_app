@@ -184,6 +184,30 @@ Notes:
   limit. If the user never pressed Start in the bot chat, dlbot answers `E-NOCHAT` and the app
   asks them to start the bot.
 
+## TikTok profile tab
+
+The **TikTok profile** tab (next to **Link**) lists a public profile and sends picked videos to
+the bot chat:
+
+```
+search ─▶ POST /api/tiktok/scan {username:"abc", limit: 10|50|100|"all"}   ("all" ≤ PROFILE_MAX_VIDEOS)
+            → {scan_id, videos:[{id,url,title,duration,thumbnail,view_count}], max_send, …}
+pick ───▶ up to max_send videos (PROFILE_MAX_SEND, default 10)
+send ───▶ POST /api/tiktok/scan/{scan_id}/send {video_ids}   → one summary message in the chat,
+            one chat-delivery job per video; the server forgets the listing
+follow ─▶ GET /api/downloads every 3 s until every video is sent or failed
+```
+
+- **One-time list.** It lives only in memory: the Pinia store (never `sessionStorage`) and one
+  slot per user on the server. It is dropped after sending, on a new search or Back, when the app
+  closes (`pagehide` → `POST /api/tiktok/scan/discard` with `keepalive`), after
+  `PROFILE_SCAN_TTL_MIN` (15 min), or when dlbot restarts.
+- **Limits.** A batch counts against the daily limit, all or nothing (`E-QUOTA` tells how many are
+  left). Searches: `PROFILE_SCAN_RATE_PER_MINUTE` (3) per user.
+- **Reliability.** TikTok refuses some profile requests at random (`E-PROFILE`, shown with
+  _Try again_). dlbot needs `curl-cffi` installed for this tab (it is in `requirements.txt`).
+  A failed video in a batch gets its own short message in the chat.
+
 ## Cold starts (Render free plan)
 
 The free dlbot instance sleeps after 15 idle minutes. When the first request takes more than
@@ -243,3 +267,8 @@ Run in Telegram iOS, Android and Desktop, in both light and dark themes.
 - [ ] **Save to Gallery, Android / Desktop**: "Save to Gallery via chat" → the bot sends the video
       to the chat → open it → ⋯ → **Save to Gallery**. This counts as one more download today.
 - [ ] Audio (MP3) shows no Gallery button.
+- [ ] **TikTok profile**: `@username` + _Last 10_ → grid of 10 videos; select 3 → **Send 3 to
+      Telegram** → one summary message, then 3 videos arrive in the chat; the status list ends at "All done".
+- [ ] Selecting more than the batch limit shows "You can send up to 10 videos at a time."
+- [ ] Unknown or private profile shows its own message; Back returns to the search.
+- [ ] Close the app on the results screen, reopen: the search screen is empty (the list was not kept).

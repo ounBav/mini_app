@@ -3,6 +3,8 @@ import { formatWait } from './format'
 
 export interface ErrorContext {
   maxMb: number
+  /** Profile tab: the username that was searched. */
+  username?: string
   format: MediaFormat
   quality: Quality | null
 }
@@ -31,7 +33,12 @@ export function isDailyLimit(retryAfter: number): boolean {
 export function describeError(
   code: ErrorCode | string,
   ctx: ErrorContext,
-  extra: { retryAfter?: number; maxDuration?: number | null } = {},
+  extra: {
+    retryAfter?: number
+    maxDuration?: number | null
+    remaining?: number | null
+    max?: number | null
+  } = {},
 ): ErrorView {
   const retryAfter = extra.retryAfter ?? 0
   switch (code) {
@@ -99,6 +106,35 @@ export function describeError(
       }
     case 'E-UNAVAILABLE':
       return { title: 'Video unavailable', message: "This video was removed or isn't available." }
+    case 'E-USERNAME':
+      return {
+        title: 'Check the username',
+        message: 'Enter a TikTok username such as @abc, or paste a profile link.',
+      }
+    case 'E-PROFILE':
+      return {
+        title: "Couldn't open this profile",
+        message: ctx.username
+          ? `Check that @${ctx.username} exists and is public. TikTok sometimes refuses us, so trying again can help.`
+          : 'Check that the profile exists and is public. TikTok sometimes refuses us, so trying again can help.',
+      }
+    case 'E-NOVIDEOS':
+      return { title: 'No videos', message: 'This profile has no public videos to list.' }
+    case 'E-SCANGONE':
+      return {
+        title: 'List expired',
+        message: 'This list was cleared. Search the profile again to pick videos.',
+      }
+    case 'E-TOOMANY':
+      return {
+        title: 'Too many videos',
+        message: `You can send up to ${extra.max ?? 10} videos at a time.`,
+      }
+    case 'E-QUOTA':
+      return {
+        title: 'Not enough downloads left',
+        message: `You can download ${extra.remaining ?? 0} more today. Select fewer videos.`,
+      }
     case 'E-GONE':
       return {
         title: 'Link expired',
@@ -171,5 +207,6 @@ export function isRetryable(code: ErrorCode | string): boolean {
     'E-RATELIMIT',
     'E-GONE',
     'E-NOCHAT', // succeeds once the user taps Start in the bot chat
+    'E-PROFILE', // TikTok refuses profile requests at random
   ].includes(code)
 }
