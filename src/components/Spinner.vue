@@ -7,7 +7,7 @@ withDefaults(defineProps<{ size?: number }>(), { size: 20 })
     :width="size"
     :height="size"
     viewBox="0 0 24 24"
-    class="animate-spin text-tg-button motion-reduce:animate-none"
+    class="animate-spin text-primary motion-reduce:animate-none"
     aria-hidden="true"
     focusable="false"
   >

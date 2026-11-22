@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import AnimatedBackground from '@/components/AnimatedBackground.vue'
 import DevBottomBar from '@/components/DevBottomBar.vue'
 import FullScreenState from '@/components/FullScreenState.vue'
 import Skeleton from '@/components/Skeleton.vue'
 import ToastMessage from '@/components/ToastMessage.vue'
 import WakeUpScreen from '@/components/WakeUpScreen.vue'
 import { useTelegram } from '@/composables/useTelegram'
+import { CONFIG_PROBLEM } from '@/config'
 import { S } from '@/lib/strings'
 import { useDownloadStore } from '@/stores/download'
 import DownloaderView from '@/views/DownloaderView.vue'
@@ -13,6 +15,8 @@ import DownloaderView from '@/views/DownloaderView.vue'
 const tg = useTelegram()
 const store = useDownloadStore()
 const canRun = tg.isTelegram || tg.isDevMock
+const origin = typeof location !== 'undefined' ? location.origin : ''
+const configProblem = CONFIG_PROBLEM ?? 'missing'
 
 onMounted(() => {
   if (canRun) void store.boot()
@@ -21,9 +25,11 @@ onMounted(() => {
 
 <template>
   <div
-    class="flex min-h-[var(--tg-viewport-stable-height,100vh)] flex-col"
+    class="relative isolate flex min-h-[var(--tg-viewport-stable-height,100vh)] flex-col"
     :class="{ 'pb-32': tg.isDevMock }"
   >
+    <AnimatedBackground />
+
     <FullScreenState v-if="!canRun" icon="telegram" :title="S.outsideTitle" :body="S.outsideBody">
       <button v-if="tg.hasBotLink" type="button" class="btn-primary w-full" @click="tg.openBotChat">
         {{ S.openInTelegram }}
@@ -56,6 +62,31 @@ onMounted(() => {
         <button type="button" class="btn-primary w-full" @click="store.boot">
           {{ S.tryAgain }}
         </button>
+      </FullScreenState>
+
+      <FullScreenState
+        v-else-if="store.phase === 'blocked'"
+        icon="lock"
+        :title="S.blockedTitle"
+        :body="S.blockedBody"
+      >
+        <p class="break-words rounded-2xl bg-muted px-3 py-2.5 text-left text-[12px] text-hint">
+          {{ S.blockedAdmin(origin) }}
+        </p>
+        <button type="button" class="btn-primary w-full" @click="store.boot">
+          {{ S.tryAgain }}
+        </button>
+      </FullScreenState>
+
+      <FullScreenState
+        v-else-if="store.phase === 'config'"
+        icon="offline"
+        :title="S.configTitle"
+        :body="S.configBody"
+      >
+        <p class="rounded-2xl bg-muted px-3 py-2.5 text-left text-[12px] text-hint">
+          {{ S.configAdmin(configProblem) }}
+        </p>
       </FullScreenState>
 
       <FullScreenState

@@ -20,5 +20,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
+    // Tests never read .env files; give the app a valid API base so config checks pass.
+    env: { VITE_API_BASE_URL: 'http://api.test' },
   },
 })

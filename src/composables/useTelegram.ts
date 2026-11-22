@@ -1,5 +1,6 @@
 import { reactive, readonly, ref } from 'vue'
 import { BOT_USERNAME, DEV_INIT_DATA } from '@/config'
+import { BRAND, setMetaThemeColor } from '@/lib/theme'
 import type { WebApp } from '@/types/telegram'
 
 /**
@@ -56,16 +57,17 @@ function systemScheme(): 'light' | 'dark' {
 function applyTheme(): void {
   colorScheme.value = isTelegram && webApp ? webApp.colorScheme : systemScheme()
   document.documentElement.dataset.theme = colorScheme.value
+  const canvas = BRAND[colorScheme.value].canvas
+  setMetaThemeColor(canvas)
   if (!isTelegram || !webApp) return
-  // The page background is secondary_bg_color (grouped-list look); cards use section_bg_color.
+  // Telegram's header and bottom bar blend into the pink canvas of the page.
   try {
-    if (versionAtLeast('6.1')) {
-      webApp.setHeaderColor('secondary_bg_color')
-      webApp.setBackgroundColor('secondary_bg_color')
-    }
-    if (versionAtLeast('7.10')) webApp.setBottomBarColor?.('secondary_bg_color')
+    if (versionAtLeast('6.9')) webApp.setHeaderColor(canvas)
+    else if (versionAtLeast('6.1')) webApp.setHeaderColor('bg_color') // keywords only before 6.9
+    if (versionAtLeast('6.1')) webApp.setBackgroundColor(canvas)
+    if (versionAtLeast('7.10')) webApp.setBottomBarColor?.(canvas)
   } catch {
-    // Old clients reject keyword colors; their defaults are fine.
+    // Old clients reject some colors; their defaults are fine.
   }
   syncMainButton()
 }
@@ -75,6 +77,15 @@ let initialised = false
 function init(): void {
   if (initialised) return
   initialised = true
+  const root = document.documentElement
+  root.dataset.platform = isTelegram && webApp ? webApp.platform : 'web'
+  // Telegram Android appends its device performance class to the user agent, e.g.
+  // "Telegram-Android/11.4.2 (Samsung SM-A125F; Android 12; SDK 31; LOW)". style.css uses it to
+  // drop the backdrop blur (AVERAGE) and also the background animation (LOW).
+  const perf = /Telegram-Android\/[\d.]+\s*\([^)]*;\s*(LOW|AVERAGE|HIGH)\)/i.exec(
+    navigator.userAgent,
+  )?.[1]
+  if (perf) root.dataset.perf = perf.toLowerCase()
   applyTheme()
   if (isTelegram && webApp) {
     webApp.ready()
@@ -107,7 +118,7 @@ function onMainClick(): void {
 function syncMainButton(): void {
   if (!isTelegram || !webApp) return
   const mb = webApp.MainButton
-  const theme = webApp.themeParams
+  const palette = BRAND[colorScheme.value]
   const active = mainButtonState.enabled && !mainButtonState.loading
   if (!mainButtonState.visible) {
     mb.hideProgress()
@@ -119,12 +130,10 @@ function syncMainButton(): void {
     text: mainButtonState.text,
     is_visible: true,
     is_active: active,
-    ...(dim
-      ? { color: theme.hint_color ?? '#999999', text_color: theme.bg_color ?? '#ffffff' }
-      : {
-          ...(theme.button_color ? { color: theme.button_color } : {}),
-          ...(theme.button_text_color ? { text_color: theme.button_text_color } : {}),
-        }),
+    color: dim ? palette.dimButton : BRAND.primary,
+    text_color: dim ? palette.dimText : BRAND.primaryFg,
+    // Bot API 7.10+: a light sweep like the in-page primary buttons; ignored by older clients.
+    ...(versionAtLeast('7.10') ? { has_shine_effect: active } : {}),
   })
   if (mainButtonState.loading) mb.showProgress(false)
   else mb.hideProgress()
@@ -214,9 +223,25 @@ function downloadFile(url: string, fileName: string): Promise<SaveResult> {
   return Promise.resolve('opened')
 }
 
+let popupOpen = false
+
+/** Native confirm dialog. A second call while one is open resolves false instead of throwing. */
 function confirm(message: string): Promise<boolean> {
   if (isTelegram && webApp && versionAtLeast('6.2')) {
-    return new Promise((resolve) => webApp.showConfirm(message, (ok) => resolve(ok)))
+    if (popupOpen) return Promise.resolve(false)
+    popupOpen = true
+    return new Promise((resolve) => {
+      try {
+        webApp.showConfirm(message, (ok) => {
+          popupOpen = false
+          resolve(ok)
+        })
+      } catch {
+        // WebAppPopupOpened (another popup is showing) or an old client.
+        popupOpen = false
+        resolve(false)
+      }
+    })
   }
   return Promise.resolve(window.confirm(message))
 }
@@ -234,9 +259,15 @@ async function readClipboard(): Promise<string | null> {
   if (isTelegram && webApp && versionAtLeast('6.4') && webApp.readTextFromClipboard) {
     const read = webApp.readTextFromClipboard.bind(webApp)
     return new Promise((resolve) => {
+      // Telegram allows this only for some launch modes; never leave the Paste button hanging.
+      const timer = setTimeout(() => resolve(null), 1_500)
       try {
-        read((text) => resolve(text || null))
+        read((text) => {
+          clearTimeout(timer)
+          resolve(text || null)
+        })
       } catch {
+        clearTimeout(timer)
         resolve(null)
       }
     })

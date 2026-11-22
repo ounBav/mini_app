@@ -1,30 +1,29 @@
 import type { Config } from 'tailwindcss'
 
-// Telegram theme colors. Each token reads a --c-* variable from src/style.css, which in turn reads
-// Telegram's --tg-theme-* variable (set and updated by telegram-web-app.js on themeChanged) and
-// falls back to Telegram's own light/dark defaults outside Telegram.
+// Pink brand theme. Every color is a CSS variable from src/style.css with a light and a dark value;
+// the dark set is used when Telegram reports colorScheme "dark" (html[data-theme="dark"]), so the
+// app still follows the user's Telegram theme and updates live on themeChanged.
 export default {
   content: ['./index.html', './src/**/*.{vue,ts}'],
   darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
-        tg: {
-          bg: 'var(--c-bg)',
-          secondary: 'var(--c-secondary)',
-          section: 'var(--c-section)',
-          text: 'var(--c-text)',
-          hint: 'var(--c-hint)',
-          subtitle: 'var(--c-subtitle)',
-          link: 'var(--c-link)',
-          accent: 'var(--c-accent)',
-          button: 'var(--c-button)',
-          'button-text': 'var(--c-button-text)',
-          'button-soft': 'var(--c-button-soft)',
-          destructive: 'var(--c-destructive)',
-          'destructive-soft': 'var(--c-destructive-soft)',
-          separator: 'var(--c-separator)',
-        },
+        canvas: 'var(--c-canvas)',
+        surface: 'var(--c-surface)',
+        'surface-solid': 'var(--c-surface-solid)',
+        muted: 'var(--c-muted)',
+        ink: 'var(--c-ink)',
+        hint: 'var(--c-hint)',
+        line: 'var(--c-line)',
+        accent: 'var(--c-accent)',
+        primary: 'var(--c-primary)',
+        'primary-2': 'var(--c-primary-2)',
+        'primary-fg': 'var(--c-primary-fg)',
+        'primary-soft': 'var(--c-primary-soft)',
+        danger: 'var(--c-danger)',
+        'danger-soft': 'var(--c-danger-soft)',
+        success: 'var(--c-success)',
         brand: {
           youtube: '#FF0033',
           tiktok: '#000000',
@@ -34,6 +33,7 @@ export default {
       },
       fontFamily: {
         sans: [
+          '"Plus Jakarta Sans"',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
@@ -43,8 +43,40 @@ export default {
           'sans-serif',
         ],
       },
+      backgroundImage: {
+        brand: 'var(--g-brand)',
+        'brand-soft': 'var(--g-brand-soft)',
+      },
+      boxShadow: {
+        glow: '0 10px 28px -10px var(--c-glow)',
+        'glow-lg': '0 18px 48px -14px var(--c-glow)',
+        card: 'var(--shadow-card)',
+      },
+      borderRadius: {
+        '4xl': '2rem',
+      },
       minHeight: { tap: '44px' },
       minWidth: { tap: '44px' },
+      keyframes: {
+        'pop-in': {
+          '0%': { transform: 'scale(0.6)', opacity: '0' },
+          '60%': { transform: 'scale(1.08)', opacity: '1' },
+          '100%': { transform: 'scale(1)' },
+        },
+        ripple: {
+          '0%': { transform: 'scale(0.8)', opacity: '0.55' },
+          '100%': { transform: 'scale(2.1)', opacity: '0' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+      },
+      animation: {
+        'pop-in': 'pop-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both',
+        ripple: 'ripple 2.4s ease-out infinite',
+        float: 'float 4s ease-in-out infinite',
+      },
     },
   },
   plugins: [],

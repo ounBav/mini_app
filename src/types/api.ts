@@ -47,7 +47,15 @@ export type ServerErrorCode =
   | 'E-GEO'
   | 'E-UNAVAILABLE'
 /** Codes produced by the client (transport problems, expired jobs). */
-export type ClientErrorCode = 'E-NETWORK' | 'E-TIMEOUT' | 'E-SERVER' | 'E-EXPIRED'
+export type ClientErrorCode =
+  | 'E-NETWORK'
+  | 'E-TIMEOUT'
+  | 'E-SERVER'
+  | 'E-EXPIRED'
+  /** The API is reachable but does not allow this page's origin (CORS). */
+  | 'E-CORS'
+  /** The API URL in the build is missing or points at the wrong server. */
+  | 'E-CONFIG'
 export type ErrorCode = ServerErrorCode | ClientErrorCode
 
 /** `detail` object of an error response (HTTPException(detail={...}) in api.py). */

@@ -4,7 +4,23 @@ Telegram Mini App for the **dlbot** media downloader: paste a YouTube, TikTok or
 preview it, choose MP4 (with quality) or MP3, watch the progress, and save the file to the device.
 
 Vue 3 (`<script setup lang="ts">`) · TypeScript · Vite · Tailwind CSS · Pinia. No UI library,
-no router (one page). About 53 KB gzipped (JS + CSS).
+no router (one page). About 58 KB gzipped (JS + CSS).
+
+## Design
+
+- **Pink brand theme**: primary `#DB2777` with a pink → fuchsia gradient (`#E0368A → #A21CAF`),
+  frosted-glass cards and the Plus Jakarta Sans font (Google Fonts, system font fallback).
+- **Light and dark** palettes in [`src/style.css`](src/style.css) (`--c-*` variables, mapped to
+  Tailwind classes such as `bg-surface`, `text-hint`, `bg-brand`). Which one is used follows
+  Telegram's `colorScheme`, and it switches live on `themeChanged`.
+- **Telegram chrome matches the brand**: the header, background and bottom bar use the canvas color,
+  and the MainButton is pink with the shine effect (Bot API 7.10+). Values in
+  [`src/lib/theme.ts`](src/lib/theme.ts); keep them in sync with `style.css`.
+- **Background animation** ([`AnimatedBackground.vue`](src/components/AnimatedBackground.vue)):
+  three drifting gradient blobs and a dot grid. It animates `transform` only (no `filter: blur`),
+  so it stays smooth on low-end Android, and it stops under _Reduce Motion_.
+- Other motion: progress ring, step indicator, pop-in success/error icons, button sheen. All of it
+  is disabled under _Reduce Motion_.
 
 The API is the existing dlbot FastAPI service (`dlbot/apps/bot/app/api.py`). It is the source of
 truth: [`src/types/api.ts`](src/types/api.ts) mirrors its responses field by field.
@@ -176,13 +192,28 @@ The free dlbot instance sleeps after 15 idle minutes. When the first request tak
 runs if the server falls asleep while the app is open. dlbot's README "Keep-alive on Render"
 (external pinger) avoids most cold starts.
 
+A failed request is repeated only if the server really was asleep, meaning `/health` needed time to
+answer. A slow preview or a failed `POST /api/downloads` on an awake server is not sent twice.
+
+## Troubleshooting
+
+| Screen in the app                                      | Cause                                                                                                                                              | Fix                                                                                                                |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Server blocked this app** (shows the page's address) | dlbot is online but its CORS list does not include the Mini App's origin. The app detects this with a `no-cors` probe of `/health`.                | On the dlbot service, set `MINIAPP_URL` to the Mini App URL (or add the origin to `CORS_ORIGINS`), then restart it |
+| **App not set up**                                     | `VITE_API_BASE_URL` is missing, invalid, `http://` on an `https://` page, or points at a server that answers HTML (usually the static site itself) | Set `VITE_API_BASE_URL=https://<dlbot>.onrender.com` in the static site's env vars and **rebuild**                 |
+| **Can't reach the server**                             | Nothing answered within 60 s                                                                                                                       | Check the dlbot service on Render (crashed, suspended, or still deploying)                                         |
+| **Session expired**                                    | initData older than `MINIAPP_AUTH_MAX_AGE` (24 h) or signed by another bot token                                                                   | Close and reopen the Mini App from the same bot                                                                    |
+
+Low-end Android: Telegram reports a device performance class in its user agent. On `AVERAGE`
+the cards drop the backdrop blur; on `LOW` the background animation is frozen as well.
+
 ## Manual test checklist
 
 Run in Telegram iOS, Android and Desktop, in both light and dark themes.
 
-- [ ] Open from the menu button: the app opens expanded, header and background match the theme,
+- [ ] Open from the menu button: the app opens expanded, header and background match the pink canvas (light or dark),
       no flash of white in dark mode.
-- [ ] Switch the Telegram theme while the app is open: colors update without a reload.
+- [ ] Switch the Telegram theme while the app is open: the pink palette switches light/dark without a reload.
 - [ ] **Paste** reads the clipboard (or shows "Long-press the field and choose Paste" if blocked).
       Share text such as `Look at this https://vm.tiktok.com/… !` is reduced to the link.
 - [ ] A `vimeo.com` link shows "This site isn't supported"; plain text shows "That doesn't look like a link".

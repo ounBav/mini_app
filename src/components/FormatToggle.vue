@@ -37,7 +37,7 @@ function onKey(event: KeyboardEvent): void {
     <div
       role="radiogroup"
       aria-labelledby="format-label"
-      class="card grid grid-cols-2 gap-1 p-1"
+      class="card grid grid-cols-2 gap-1.5 p-1.5"
       @keydown="onKey"
     >
       <button
@@ -49,20 +49,41 @@ function onKey(event: KeyboardEvent): void {
         :aria-checked="modelValue === opt.value"
         :tabindex="modelValue === opt.value ? 0 : -1"
         :disabled="isDisabled(opt.value)"
-        class="flex min-h-[52px] flex-col items-center justify-center rounded-xl px-3 transition-colors disabled:opacity-40"
+        class="flex min-h-[60px] flex-col items-center justify-center rounded-2xl px-3 transition duration-200 disabled:opacity-40"
         :class="
           modelValue === opt.value
-            ? 'bg-tg-button text-tg-button-text'
-            : 'text-tg-text active:bg-tg-secondary'
+            ? 'bg-brand text-primary-fg shadow-glow'
+            : 'text-ink active:bg-muted'
         "
         @click="select(opt.value)"
       >
-        <span class="text-[15px] font-semibold">{{ opt.label }}</span>
-        <span
-          class="text-[12px]"
-          :class="modelValue === opt.value ? 'opacity-80' : 'text-tg-hint'"
-          >{{ opt.hint }}</span
-        >
+        <span class="flex items-center gap-1.5 text-[15px] font-bold">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <template v-if="opt.value === 'video'">
+              <rect x="3" y="5" width="18" height="14" rx="3" />
+              <path d="m10 9.5 4.5 2.5-4.5 2.5z" fill="currentColor" />
+            </template>
+            <template v-else>
+              <path d="M9 18V6l11-2v12" />
+              <circle cx="6.5" cy="18" r="2.5" />
+              <circle cx="17.5" cy="16" r="2.5" />
+            </template>
+          </svg>
+          {{ opt.label }}
+        </span>
+        <span class="text-[12px]" :class="modelValue === opt.value ? 'opacity-80' : 'text-hint'">{{
+          opt.hint
+        }}</span>
       </button>
     </div>
   </div>

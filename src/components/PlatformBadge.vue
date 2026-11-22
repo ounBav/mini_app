@@ -22,7 +22,9 @@ const solidClass = computed(
 <template>
   <span
     class="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full pl-1.5 pr-2.5 text-[13px] font-medium"
-    :class="variant === 'solid' ? solidClass : 'bg-tg-secondary text-tg-text'"
+    :class="
+      variant === 'solid' ? solidClass : 'border border-line bg-surface text-ink backdrop-blur-md'
+    "
   >
     <PlatformIcon :platform="platform" :size="18" />
     {{ label ?? PLATFORM_LABELS[platform] }}

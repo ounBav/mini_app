@@ -3,55 +3,79 @@
 @tailwind utilities;
 
 /*
- * Theme tokens. telegram-web-app.js sets --tg-theme-* on <html> and updates them on themeChanged,
- * so every tg-* Tailwind class follows the user's Telegram theme live. The fallbacks are
- * Telegram's default light / dark palettes, used when developing in a normal browser.
+ * Pink brand palette. Light is the default; html[data-theme='dark'] is set from Telegram's
+ * colorScheme (or prefers-color-scheme outside Telegram) by useTelegram.applyTheme().
+ * Contrast: ink/hint on canvas and white on the brand gradient are AA for their text sizes.
  */
 :root {
-  --c-bg: var(--tg-theme-bg-color, #ffffff);
-  --c-secondary: var(--tg-theme-secondary-bg-color, #f1f1f4);
-  --c-section: var(--tg-theme-section-bg-color, var(--c-bg));
-  --c-text: var(--tg-theme-text-color, #000000);
-  --c-hint: var(--tg-theme-hint-color, #8e8e93);
-  --c-subtitle: var(--tg-theme-subtitle-text-color, var(--c-hint));
-  --c-link: var(--tg-theme-link-color, #2481cc);
-  --c-accent: var(--tg-theme-accent-text-color, var(--c-link));
-  --c-button: var(--tg-theme-button-color, #2481cc);
-  --c-button-text: var(--tg-theme-button-text-color, #ffffff);
-  --c-destructive: var(--tg-theme-destructive-text-color, #e53935);
-  --c-separator: var(--tg-theme-section-separator-color, rgba(0, 0, 0, 0.1));
-  --c-button-soft: rgba(36, 129, 204, 0.12);
-  --c-destructive-soft: rgba(229, 57, 53, 0.12);
+  --c-canvas: #fff6fa;
+  --c-surface: rgba(255, 255, 255, 0.72);
+  --c-surface-solid: #ffffff;
+  --c-surface-flat: rgba(255, 255, 255, 0.9);
+  --c-muted: #fbe8f1;
+  --c-ink: #24101d;
+  --c-hint: #7f6273;
+  --c-line: rgba(36, 16, 29, 0.08);
+  --c-accent: #be185d;
+  --c-primary: #db2777;
+  --c-primary-2: #a21caf;
+  --c-primary-fg: #ffffff;
+  --c-primary-soft: rgba(219, 39, 119, 0.1);
+  --c-danger: #e11d48;
+  --c-danger-soft: rgba(225, 29, 72, 0.1);
+  --c-success: #db2777;
+  --c-glow: rgba(219, 39, 119, 0.55);
+
+  --g-brand: linear-gradient(135deg, #e0368a 0%, #c0267b 52%, #a21caf 100%);
+  --g-brand-soft: linear-gradient(135deg, rgba(236, 72, 153, 0.14), rgba(168, 85, 247, 0.12));
+  --g-title: linear-gradient(100deg, #db2777 10%, #a21caf 90%);
+  --shadow-card:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(120, 20, 80, 0.06),
+    0 14px 36px -20px rgba(120, 20, 80, 0.35);
+
+  /* Animated background blobs */
+  --blob-1: rgba(244, 114, 182, 0.55);
+  --blob-2: rgba(232, 121, 249, 0.4);
+  --blob-3: rgba(253, 164, 175, 0.5);
+  --dots: rgba(190, 24, 93, 0.09);
+
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-  --c-bg: var(--tg-theme-bg-color, #17212b);
-  --c-secondary: var(--tg-theme-secondary-bg-color, #0e1621);
-  --c-text: var(--tg-theme-text-color, #f5f5f5);
-  --c-hint: var(--tg-theme-hint-color, #708499);
-  --c-link: var(--tg-theme-link-color, #6ab3f3);
-  --c-button: var(--tg-theme-button-color, #5288c1);
-  --c-button-text: var(--tg-theme-button-text-color, #ffffff);
-  --c-destructive: var(--tg-theme-destructive-text-color, #ec3942);
-  --c-separator: var(--tg-theme-section-separator-color, rgba(255, 255, 255, 0.08));
-  --c-button-soft: rgba(82, 136, 193, 0.18);
-  --c-destructive-soft: rgba(236, 57, 66, 0.16);
-  color-scheme: dark;
-}
+  --c-canvas: #13070f;
+  --c-surface: rgba(42, 18, 34, 0.62);
+  --c-surface-solid: #22101c;
+  --c-surface-flat: rgba(34, 16, 28, 0.92);
+  --c-muted: rgba(255, 255, 255, 0.07);
+  --c-ink: #fcf0f6;
+  --c-hint: #c3a3b6;
+  --c-line: rgba(255, 255, 255, 0.09);
+  --c-accent: #f9a8d4;
+  --c-primary-soft: rgba(244, 114, 182, 0.16);
+  --c-danger: #fb7185;
+  --c-danger-soft: rgba(251, 113, 133, 0.14);
+  --c-success: #f472b6;
+  --c-glow: rgba(236, 72, 153, 0.5);
 
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-  :root,
-  :root[data-theme='dark'] {
-    --c-button-soft: color-mix(in srgb, var(--c-button) 14%, transparent);
-    --c-destructive-soft: color-mix(in srgb, var(--c-destructive) 14%, transparent);
-  }
+  --g-brand-soft: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.16));
+  --g-title: linear-gradient(100deg, #f9a8d4 10%, #e879f9 90%);
+  --shadow-card:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 18px 40px -22px rgba(0, 0, 0, 0.8);
+
+  --blob-1: rgba(219, 39, 119, 0.42);
+  --blob-2: rgba(162, 28, 175, 0.38);
+  --blob-3: rgba(244, 63, 94, 0.28);
+  --dots: rgba(249, 168, 212, 0.07);
+
+  color-scheme: dark;
 }
 
 @layer base {
   html,
   body {
-    @apply bg-tg-secondary text-tg-text antialiased;
+    @apply bg-canvas font-sans text-ink antialiased;
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
   }
@@ -77,37 +101,100 @@
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-tg-button ring-offset-2 ring-offset-tg-secondary;
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-canvas;
+  }
+
+  /* Step headings receive programmatic focus for screen readers; they are not controls. */
+  [tabindex='-1']:focus,
+  [tabindex='-1']:focus-visible {
+    @apply outline-none ring-0 ring-offset-0;
   }
 }
 
 @layer components {
+  /* Frosted glass card over the animated background. */
   .card {
-    @apply rounded-2xl bg-tg-section;
+    @apply rounded-3xl border border-line bg-surface shadow-card;
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    backdrop-filter: blur(18px) saturate(1.5);
   }
 
   .btn {
-    @apply inline-flex min-h-tap items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-semibold transition-opacity active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply relative inline-flex min-h-[48px] items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 text-[15px] font-semibold transition duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
 
   .btn-primary {
-    @apply btn bg-tg-button text-tg-button-text;
+    @apply btn bg-brand text-primary-fg shadow-glow;
+  }
+
+  /* Light sweep across primary buttons. */
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%) skewX(-20deg);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+    animation: sheen 3.6s ease-in-out infinite;
+  }
+
+  .btn-primary:disabled::after {
+    display: none;
   }
 
   .btn-soft {
-    @apply btn bg-tg-button-soft text-tg-link;
+    @apply btn bg-primary-soft text-accent;
   }
 
   .btn-ghost {
-    @apply btn text-tg-link;
+    @apply btn text-accent;
   }
 
   .btn-danger {
-    @apply btn bg-tg-destructive-soft text-tg-destructive;
+    @apply btn bg-danger-soft text-danger;
   }
 
   .section-label {
-    @apply px-4 pb-1.5 text-[13px] font-medium uppercase tracking-wide text-tg-hint;
+    @apply px-1 pb-2 text-[12px] font-bold uppercase tracking-[0.08em] text-hint;
+  }
+
+  .text-gradient {
+    background: var(--g-title);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .icon-tile {
+    @apply flex items-center justify-center rounded-2xl bg-brand text-primary-fg shadow-glow;
+  }
+}
+
+@keyframes sheen {
+  0%,
+  55% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+/*
+ * Weaker Android devices (Telegram's performance class, see useTelegram.init): blurring the
+ * animated background behind every card each frame is the costliest effect, so use a nearly
+ * opaque card instead. LOW also freezes the background (AnimatedBackground.vue).
+ */
+:root[data-perf='low'] .card,
+:root[data-perf='average'] .card {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--c-surface-flat);
+}
+
+/* Old webviews without backdrop-filter: use an opaque card so text stays readable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card {
+    background: var(--c-surface-solid);
   }
 }
 
@@ -119,5 +206,9 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .btn-primary::after {
+    display: none;
   }
 }

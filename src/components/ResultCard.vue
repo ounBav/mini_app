@@ -34,12 +34,12 @@ const showShare = computed(
 
 <template>
   <section
-    class="card flex flex-col items-center gap-4 px-4 pb-4 pt-6 text-center"
+    class="card flex flex-col items-center gap-4 px-5 pb-5 pt-7 text-center"
     aria-labelledby="done-title"
   >
     <div
-      class="flex h-16 w-16 items-center justify-center rounded-full"
-      :class="expired ? 'bg-tg-secondary text-tg-hint' : 'bg-tg-button-soft text-tg-button'"
+      class="flex h-20 w-20 animate-pop-in items-center justify-center rounded-full"
+      :class="expired ? 'bg-muted text-hint' : 'bg-brand text-primary-fg shadow-glow-lg'"
       aria-hidden="true"
     >
       <svg width="34" height="34" viewBox="0 0 24 24">
@@ -64,22 +64,22 @@ const showShare = computed(
     </div>
 
     <div class="flex w-full flex-col gap-1">
-      <h2 id="done-title" tabindex="-1" class="text-[20px] font-bold">
+      <h2 id="done-title" tabindex="-1" class="text-[22px] font-extrabold">
         {{ toChat ? S.sentTitle : S.readyTitle }}
       </h2>
       <template v-if="file">
         <p class="break-words text-[15px] font-medium">{{ file.name }}</p>
-        <p class="text-[14px] tabular-nums text-tg-hint">{{ formatBytes(file.size) }}</p>
+        <p class="text-[14px] tabular-nums text-hint">{{ formatBytes(file.size) }}</p>
       </template>
-      <p v-else-if="toChat" class="text-[15px] text-tg-hint">
+      <p v-else-if="toChat" class="text-[15px] text-hint">
         {{ isVideo ? S.chatGalleryNext : S.sentBody }}
       </p>
     </div>
 
     <p
       v-if="file"
-      class="w-full rounded-xl bg-tg-secondary px-3 py-2.5 text-[13px]"
-      :class="expired ? 'text-tg-destructive' : 'text-tg-hint'"
+      class="w-full rounded-2xl bg-muted px-3 py-2.5 text-[13px] font-medium"
+      :class="expired ? 'text-danger' : 'text-hint'"
       aria-live="polite"
     >
       {{ expired ? S.expired : S.expiresIn(formatWait(secondsLeft)) }}
@@ -95,7 +95,7 @@ const showShare = computed(
           :aria-busy="galleryState === 'loading'"
           @click="$emit('saveGallery')"
         >
-          <Spinner v-if="galleryState === 'loading'" :size="18" class="!text-tg-button-text" />
+          <Spinner v-if="galleryState === 'loading'" :size="18" class="!text-primary-fg" />
           <svg v-else width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
             <rect
               x="3"
@@ -118,11 +118,11 @@ const showShare = computed(
           </svg>
           {{ galleryState === 'loading' ? S.preparingGallery : S.saveToGallery }}
         </button>
-        <p class="text-[12px] text-tg-hint">{{ S.galleryShareHint }}</p>
+        <p class="text-[12px] text-hint">{{ S.galleryShareHint }}</p>
       </template>
       <p
         v-else-if="galleryMode === 'share' && galleryState === 'failed'"
-        class="text-[13px] text-tg-hint"
+        class="text-[13px] text-hint"
       >
         {{ S.galleryPrepareFailed }}
       </p>
@@ -135,7 +135,7 @@ const showShare = computed(
           <Spinner v-if="busy" :size="18" />
           {{ S.sendToChatGallery }}
         </button>
-        <p class="text-[12px] text-tg-hint">{{ S.galleryChatHint }}</p>
+        <p class="text-[12px] text-hint">{{ S.galleryChatHint }}</p>
       </template>
 
       <button

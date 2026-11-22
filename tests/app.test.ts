@@ -51,7 +51,7 @@ describe('App', () => {
     const store = useDownloadStore(pinia)
     await vi.waitFor(() => expect(store.phase).toBe('ready'))
     await nextTick()
-    expect(el.textContent).toContain('2/30 today')
+    expect(el.querySelector('[aria-label="2/30 today"]')).not.toBeNull()
     expect(el.querySelector('#url-input')).not.toBeNull()
 
     store.setInput('https://vm.tiktok.com/ZM1/')

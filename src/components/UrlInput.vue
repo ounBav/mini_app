@@ -62,10 +62,24 @@ function clear(): void {
 
 <template>
   <form class="flex flex-col gap-2" novalidate @submit.prevent="emit('submit')">
+    <div class="card relative mb-3 overflow-hidden px-5 py-6">
+      <div
+        class="absolute -right-24 -top-28 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,rgba(236,72,153,0.28),rgba(168,85,247,0.1)_55%,transparent)]"
+        aria-hidden="true"
+      />
+      <p class="relative text-[26px] font-extrabold leading-[1.15] tracking-tight">
+        {{ S.heroTitle }}<br /><span class="text-gradient">{{ S.heroAccent }}</span>
+      </p>
+      <p class="relative mt-2 text-[14px] text-hint">{{ S.heroBody }}</p>
+    </div>
     <label for="url-input" class="section-label">{{ S.linkLabel }}</label>
     <div
-      class="card flex min-h-[56px] items-center gap-2 py-1.5 pl-4 pr-1.5 ring-1 transition-shadow"
-      :class="invalid ? 'ring-tg-destructive' : 'ring-transparent focus-within:ring-tg-button'"
+      class="card flex min-h-[64px] items-center gap-2 py-2 pl-5 pr-2 ring-2 transition duration-200"
+      :class="
+        invalid
+          ? 'ring-danger'
+          : 'ring-transparent focus-within:shadow-glow focus-within:ring-primary'
+      "
     >
       <input
         id="url-input"
@@ -81,13 +95,13 @@ function clear(): void {
         :placeholder="S.linkPlaceholder"
         :aria-invalid="invalid"
         aria-describedby="url-message"
-        class="min-w-0 flex-1 bg-transparent py-2 text-[16px] text-tg-text placeholder:text-tg-hint focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+        class="min-w-0 flex-1 bg-transparent py-2 text-[16px] text-ink placeholder:text-hint focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
         @input="onInput"
       />
       <button
         v-if="modelValue"
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-tg-hint active:opacity-60"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-hint active:opacity-60"
         :aria-label="S.clear"
         @click="clear"
       >
@@ -95,13 +109,18 @@ function clear(): void {
           <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.35" />
           <path
             d="m8.5 8.5 7 7m0-7-7 7"
-            stroke="var(--c-section)"
+            stroke="var(--c-surface-solid)"
             stroke-width="2"
             stroke-linecap="round"
           />
         </svg>
       </button>
-      <button v-else type="button" class="btn-soft shrink-0 px-3.5" @click="paste">
+      <button
+        v-else
+        type="button"
+        class="btn-primary min-h-[44px] shrink-0 rounded-xl px-4"
+        @click="paste"
+      >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
           <path
             d="M9 4h6v3H9zM8 5.5H6.5A1.5 1.5 0 0 0 5 7v12.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V7a1.5 1.5 0 0 0-1.5-1.5H16"
@@ -117,8 +136,8 @@ function clear(): void {
 
     <p
       id="url-message"
-      class="flex min-h-[28px] items-center gap-2 px-4 text-[13px]"
-      :class="message?.tone === 'error' ? 'text-tg-destructive' : 'text-tg-hint'"
+      class="flex min-h-[28px] items-center gap-2 px-1 text-[13px]"
+      :class="message?.tone === 'error' ? 'text-danger' : 'text-hint'"
       aria-live="polite"
     >
       <PlatformBadge
@@ -130,8 +149,8 @@ function clear(): void {
       <template v-else-if="message">{{ message.text }}</template>
     </p>
 
-    <div class="flex flex-wrap items-center gap-2 px-4 pt-2">
-      <span class="text-[13px] text-tg-hint">{{ S.supported }}</span>
+    <div class="flex flex-wrap items-center gap-2 px-1 pt-2">
+      <span class="text-[13px] text-hint">{{ S.supported }}</span>
       <PlatformBadge v-for="p in PLATFORM_ORDER" :key="p" :platform="p" />
     </div>
   </form>

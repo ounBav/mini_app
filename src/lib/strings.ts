@@ -5,8 +5,14 @@ export const S = {
   appTitle: 'Media Downloader',
   tagline: 'Save videos and audio from YouTube, TikTok and Facebook',
   usage: (used: number, limit: number) => `${used}/${limit} today`,
+  usageSuffix: 'today',
 
   // Paste link
+  heroTitle: 'Paste a link,',
+  heroAccent: 'get the file.',
+  heroBody: 'MP4 up to 1080p or MP3, saved straight to your phone.',
+  steps: ['Link', 'Format', 'Download', 'Save'],
+  stepsLabel: 'Steps',
   linkLabel: 'Video link',
   linkPlaceholder: 'Paste a TikTok, YouTube or Facebook link',
   paste: 'Paste',
@@ -90,6 +96,18 @@ export const S = {
   wakeElapsed: (s: number) => `${s}s`,
   offlineTitle: "Can't reach the server",
   offlineBody: 'The server did not answer. Check your connection and try again.',
+
+  blockedTitle: 'Server blocked this app',
+  blockedBody:
+    "The server is online but doesn't allow this app's address yet. Please tell the bot admin.",
+  blockedAdmin: (origin: string) =>
+    `Admin: add ${origin} to MINIAPP_URL or CORS_ORIGINS on the dlbot server, then restart it.`,
+  configTitle: 'App not set up',
+  configBody: "This app isn't connected to its server correctly. Please tell the bot admin.",
+  configAdmin: (problem: string) =>
+    problem === 'insecure'
+      ? 'Admin: VITE_API_BASE_URL must use https://. Fix it and rebuild the app.'
+      : 'Admin: set VITE_API_BASE_URL to the dlbot server URL and rebuild the app.',
 
   // Full-screen states
   outsideTitle: 'Open this in Telegram',

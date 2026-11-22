@@ -13,12 +13,12 @@ defineProps<{
 
 <template>
   <section
-    class="card flex flex-col items-center gap-3 px-4 pb-4 pt-6 text-center"
+    class="card flex flex-col items-center gap-3 px-5 pb-5 pt-7 text-center"
     role="alert"
     aria-labelledby="error-title"
   >
     <div
-      class="flex h-16 w-16 items-center justify-center rounded-full bg-tg-destructive-soft text-tg-destructive"
+      class="flex h-20 w-20 animate-pop-in items-center justify-center rounded-[28px] bg-danger-soft text-danger"
       aria-hidden="true"
     >
       <svg width="32" height="32" viewBox="0 0 24 24">
@@ -32,9 +32,9 @@ defineProps<{
         />
       </svg>
     </div>
-    <h2 id="error-title" tabindex="-1" class="text-[20px] font-bold">{{ title }}</h2>
-    <p class="text-[15px] leading-relaxed text-tg-hint">{{ message }}</p>
-    <p v-if="code" class="text-[12px] tabular-nums text-tg-hint opacity-70">{{ code }}</p>
+    <h2 id="error-title" tabindex="-1" class="text-[22px] font-extrabold">{{ title }}</h2>
+    <p class="text-[15px] leading-relaxed text-hint">{{ message }}</p>
+    <p v-if="code" class="text-[12px] tabular-nums text-hint opacity-70">{{ code }}</p>
     <div v-if="actions?.length" class="mt-1 flex w-full flex-col gap-2">
       <button
         v-for="action in actions"

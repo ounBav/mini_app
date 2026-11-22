@@ -22,7 +22,7 @@ watch(
 
 <template>
   <article class="card overflow-hidden" :aria-busy="loading">
-    <div class="relative aspect-video w-full bg-tg-secondary">
+    <div class="relative aspect-video w-full bg-muted">
       <Skeleton
         v-if="loading || (info?.thumbnail && !imgLoaded && !imgFailed)"
         class="absolute inset-0"
@@ -41,7 +41,7 @@ watch(
       />
       <div
         v-else-if="info && !loading"
-        class="absolute inset-0 flex items-center justify-center text-tg-hint"
+        class="absolute inset-0 flex items-center justify-center text-hint"
         aria-hidden="true"
       >
         <svg width="48" height="48" viewBox="0 0 24 24">
@@ -58,6 +58,11 @@ watch(
           <path d="M10 9.5v5l4.3-2.5z" fill="currentColor" />
         </svg>
       </div>
+      <div
+        v-if="info && !loading"
+        class="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/45 to-transparent"
+        aria-hidden="true"
+      />
       <PlatformBadge
         v-if="info"
         :platform="info.platform"
@@ -79,10 +84,10 @@ watch(
         <span class="sr-only" role="status">{{ S.readingLink }}</span>
       </template>
       <template v-else>
-        <h2 class="line-clamp-2 text-[16px] font-semibold leading-snug" :title="info.title">
+        <h2 class="line-clamp-2 text-[16px] font-bold leading-snug" :title="info.title">
           {{ info.title }}
         </h2>
-        <p v-if="info.uploader" class="truncate text-[14px] text-tg-hint">
+        <p v-if="info.uploader" class="truncate text-[14px] text-hint">
           {{ S.by(info.uploader) }}
         </p>
       </template>

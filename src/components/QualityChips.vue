@@ -43,17 +43,15 @@ function onKey(event: KeyboardEvent): void {
         :aria-checked="modelValue === q"
         :tabindex="modelValue === q || (modelValue == null && q === qualities[0]) ? 0 : -1"
         :disabled="disabled"
-        class="flex min-h-tap min-w-[72px] items-center justify-center gap-1 rounded-full px-4 text-[15px] font-semibold tabular-nums transition-colors disabled:opacity-50"
-        :class="modelValue === q ? 'bg-tg-button text-tg-button-text' : 'card text-tg-text'"
+        class="flex min-h-tap min-w-[72px] items-center justify-center gap-1 rounded-full px-4 text-[15px] font-bold tabular-nums transition duration-200 active:scale-95 disabled:opacity-50"
+        :class="modelValue === q ? 'bg-brand text-primary-fg shadow-glow' : 'card text-ink'"
         @click="emit('update:modelValue', q)"
       >
         {{ q }}p
         <span
           v-if="q >= 720"
           class="rounded px-1 text-[10px] font-bold leading-4"
-          :class="
-            modelValue === q ? 'bg-tg-button-text text-tg-button' : 'bg-tg-button-soft text-tg-link'
-          "
+          :class="modelValue === q ? 'bg-white/25 text-white' : 'bg-primary-soft text-accent'"
           >HD</span
         >
       </button>

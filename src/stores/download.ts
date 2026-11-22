@@ -11,8 +11,9 @@ import {
   getMe,
   listDownloads,
 } from '@/api/media'
+import { isServerReachable } from '@/api/client'
 import { useTelegram } from '@/composables/useTelegram'
-import { WAKE_UP_AFTER_MS, WAKE_UP_DEADLINE_MS } from '@/config'
+import { CONFIG_PROBLEM, WAKE_UP_AFTER_MS, WAKE_UP_DEADLINE_MS } from '@/config'
 import { describeError, type ErrorView } from '@/lib/errors'
 import { defaultQuality, lowerQuality } from '@/lib/format'
 import { clearSession, loadSession, saveSession } from '@/lib/session'
@@ -32,7 +33,18 @@ import {
 
 export type Step = 'input' | 'preview' | 'progress' | 'done' | 'error'
 /** App-wide connection/auth state, shown as full-screen states by App.vue. */
-export type Phase = 'booting' | 'waking' | 'ready' | 'offline' | 'auth' | 'banned'
+export type Phase =
+  | 'booting'
+  | 'waking'
+  | 'ready'
+  | 'offline'
+  | 'auth'
+  | 'banned'
+  /** The server is up but its CORS list does not include this page's origin. */
+  | 'blocked'
+  /** The build has no usable VITE_API_BASE_URL. */
+  | 'config'
+type WakeResult = 'awake' | 'woke' | 'blocked' | 'down'
 /** Which operation produced the current error (decides what "Try again" repeats). */
 export type FailedOp = 'info' | 'download' | 'job'
 export type GalleryMode = 'share' | 'chat' | 'none'
@@ -74,6 +86,7 @@ export const useDownloadStore = defineStore('download', () => {
   const toast = ref<string | null>(null)
 
   let infoCtrl: AbortController | null = null
+  let saving = false
   let toastTimer: ReturnType<typeof setTimeout> | null = null
 
   // ------------------------------------------------------------------ derived
@@ -134,10 +147,18 @@ export const useDownloadStore = defineStore('download', () => {
   /**
    * Probe /health until the server answers (Render free instances sleep after 15 idle minutes).
    * The wake-up screen appears only if this takes longer than WAKE_UP_AFTER_MS.
+   *
+   * - 'awake':   /health answered at once, so the server was not asleep (the failed request was
+   *              slow or broken for another reason, and repeating it would not help).
+   * - 'woke':    /health answered after a wait: the server was asleep and is up now.
+   * - 'blocked': /health never passed CORS, but the server is reachable: the API does not allow
+   *              this page's origin (dlbot MINIAPP_URL / CORS_ORIGINS).
+   * - 'down':    nothing answered before the deadline.
    */
-  async function wakeServer(deadlineMs: number): Promise<boolean> {
+  async function wakeServer(deadlineMs: number): Promise<WakeResult> {
     const before = phase.value
-    const deadline = Date.now() + deadlineMs
+    const startedAt = Date.now()
+    const deadline = startedAt + deadlineMs
     const slow = setTimeout(() => {
       if (phase.value === 'ready' || phase.value === 'booting') {
         wakeStartedAt.value = Date.now()
@@ -145,22 +166,30 @@ export const useDownloadStore = defineStore('download', () => {
       }
     }, WAKE_UP_AFTER_MS)
     try {
+      let attempts = 0
       while (Date.now() < deadline) {
+        attempts += 1
         try {
           await getHealth(Math.max(1_000, Math.min(10_000, deadline - Date.now())))
-          return true
+          return attempts === 1 && Date.now() - startedAt < WAKE_UP_AFTER_MS ? 'awake' : 'woke'
         } catch {
           await sleep(2_000)
         }
       }
-      return false
+      // Checked only after the deadline: while Render boots an instance, its proxy can answer
+      // without CORS headers too, so an early check would mistake a cold start for a CORS block.
+      return (await isServerReachable()) ? 'blocked' : 'down'
     } finally {
       clearTimeout(slow)
       if (phase.value === 'waking' && before !== 'waking') phase.value = before
     }
   }
 
-  /** Run a request; if the server looks asleep, wake it and try once more. */
+  /**
+   * Run a request; if the server was asleep, wake it and try once more. A request that failed
+   * while the server was awake is not repeated (a slow /info would double the wait, and a
+   * repeated POST /downloads could start a second job).
+   */
   async function withWake<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn()
@@ -168,7 +197,9 @@ export const useDownloadStore = defineStore('download', () => {
       if (isAbortError(err)) throw err
       const e = toApiError(err)
       if (!e.isUnreachable) throw e
-      if (!(await wakeServer(WAKE_UP_DEADLINE_MS))) throw e
+      const result = await wakeServer(WAKE_UP_DEADLINE_MS)
+      if (result === 'blocked') throw new ApiError('E-CORS')
+      if (result !== 'woke') throw e
       return await fn()
     }
   }
@@ -191,6 +222,10 @@ export const useDownloadStore = defineStore('download', () => {
   // ------------------------------------------------------------------ boot & restore
   async function boot(): Promise<void> {
     const startedAt = Date.now()
+    if (CONFIG_PROBLEM) {
+      phase.value = 'config'
+      return
+    }
     phase.value = 'booting'
     const slow = setTimeout(() => {
       if (phase.value === 'booting') {
@@ -204,8 +239,17 @@ export const useDownloadStore = defineStore('download', () => {
       await restore()
     } catch (err) {
       const e = toApiError(err)
-      phase.value = e.code === 'E-AUTH' ? 'auth' : e.code === 'E-BANNED' ? 'banned' : 'offline'
-      if (phase.value === 'offline') tg.haptic('error')
+      phase.value =
+        e.code === 'E-AUTH'
+          ? 'auth'
+          : e.code === 'E-BANNED'
+            ? 'banned'
+            : e.code === 'E-CORS'
+              ? 'blocked'
+              : e.code === 'E-CONFIG'
+                ? 'config'
+                : 'offline'
+      if (phase.value !== 'auth') tg.haptic('error')
     } finally {
       clearTimeout(slow)
     }
@@ -217,8 +261,10 @@ export const useDownloadStore = defineStore('download', () => {
     } catch (err) {
       const e = toApiError(err)
       if (!e.isUnreachable) throw e
-      if (!(await wakeServer(deadline - Date.now()))) throw e
-      return await getMe(15_000)
+      const result = await wakeServer(deadline - Date.now())
+      if (result === 'blocked') throw new ApiError('E-CORS')
+      if (result === 'down') throw e
+      return await getMe(15_000) // a GET is safe to repeat even if the server was awake
     }
   }
 
@@ -478,6 +524,8 @@ export const useDownloadStore = defineStore('download', () => {
     const current = job.value
     if (!current || cancelling.value) return
     if (!(await tg.confirm(S.cancelConfirm))) return
+    // The job may have finished while the dialog was open.
+    if (job.value?.id !== current.id || FINAL_STATUSES.has(job.value.status)) return
     cancelling.value = true
     try {
       await cancelDownload(current.id)
@@ -501,12 +549,18 @@ export const useDownloadStore = defineStore('download', () => {
       setError('E-GONE', 'download')
       return
     }
-    const result = await tg.downloadFile(fileUrl(file.download_path), file.name)
-    if (result === 'started') {
-      tg.haptic('success')
-      showToast(S.saveStarted)
-    } else if (result === 'declined') {
-      showToast(S.saveDeclined)
+    if (saving) return // the native download sheet is already open
+    saving = true
+    try {
+      const result = await tg.downloadFile(fileUrl(file.download_path), file.name)
+      if (result === 'started') {
+        tg.haptic('success')
+        showToast(S.saveStarted)
+      } else if (result === 'declined') {
+        showToast(S.saveDeclined)
+      }
+    } finally {
+      saving = false
     }
   }
 

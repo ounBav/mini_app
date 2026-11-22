@@ -64,6 +64,24 @@ export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`
 }
 
+/**
+ * True when the server answers at all, even if CORS hides the response from this page.
+ * A `no-cors` request resolves with an opaque response whenever any HTTP reply arrives, so
+ * "CORS request failed + no-cors request succeeded" means the API does not allow this origin.
+ */
+export async function isServerReachable(timeoutMs = 8_000): Promise<boolean> {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    await fetch(apiUrl('/health'), { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+    return true
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 function detailOf(data: unknown): ApiErrorDetail | null {
   const detail = (data as { detail?: unknown } | null)?.detail
   return detail && typeof detail === 'object' && !Array.isArray(detail)
@@ -122,6 +140,11 @@ export async function request<T>(
   } catch {
     // Empty or non-JSON body (e.g. a proxy error page while Render wakes the service).
   }
-  if (resp.ok) return data as T
+  if (resp.ok) {
+    // Every dlbot endpoint answers JSON. A 2xx without it means the base URL points at the wrong
+    // server (typically the static site itself, which rewrites /api/* to index.html).
+    if (data === null || typeof data !== 'object') throw new ApiError('E-CONFIG', resp.status)
+    return data as T
+  }
   throw new ApiError(codeFromResponse(resp.status, data), resp.status, detailOf(data) ?? {})
 }

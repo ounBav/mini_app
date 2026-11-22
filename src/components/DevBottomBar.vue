@@ -8,9 +8,9 @@ const tg = useTelegram()
 
 <template>
   <div
-    class="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-tg-separator bg-tg-bg px-4 pb-4 pt-2"
+    class="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-line bg-surface backdrop-blur-xl px-4 pb-4 pt-2"
   >
-    <p class="text-center text-[11px] uppercase tracking-wide text-tg-hint">{{ S.devMock }}</p>
+    <p class="text-center text-[11px] uppercase tracking-wide text-hint">{{ S.devMock }}</p>
     <div class="flex gap-2">
       <button
         v-if="tg.backButton.visible"

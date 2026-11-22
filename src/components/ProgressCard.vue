@@ -13,8 +13,10 @@ const props = defineProps<{
 }>()
 defineEmits<{ cancel: [] }>()
 
-const pct = computed(() => percent(props.job.progress))
+const RADIUS = 62
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
+const pct = computed(() => percent(props.job.progress))
 const stage = computed<StageKey>(() => (props.cancelling ? 'cancelling' : props.job.status))
 
 const stageText = computed(() => {
@@ -23,9 +25,12 @@ const stageText = computed(() => {
   return S.stage[stage.value]
 })
 
-/** Downloading with a known fraction shows a real bar; every other stage is indeterminate. */
+/** Downloading with a known fraction fills the ring; every other stage spins. */
 const determinate = computed(
   () => stage.value === 'downloading' && pct.value != null && pct.value > 0,
+)
+const dashOffset = computed(() =>
+  determinate.value ? CIRCUMFERENCE * (1 - (pct.value ?? 0) / 100) : CIRCUMFERENCE * 0.72,
 )
 
 const formatLabel = computed(() =>
@@ -34,53 +39,92 @@ const formatLabel = computed(() =>
 </script>
 
 <template>
-  <section class="card flex flex-col gap-4 p-4" aria-labelledby="progress-title">
-    <div class="flex items-start gap-3">
+  <section
+    class="card flex flex-col items-center gap-5 px-5 pb-5 pt-7"
+    aria-labelledby="progress-title"
+  >
+    <div
+      class="relative h-[156px] w-[156px]"
+      role="progressbar"
+      :aria-label="S.stage.downloading"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      :aria-valuenow="determinate ? (pct ?? undefined) : undefined"
+      :aria-valuetext="stageText"
+    >
+      <!-- soft halo behind the ring -->
+      <div class="absolute inset-3 rounded-full bg-brand-soft blur-xl" aria-hidden="true" />
+      <svg viewBox="0 0 156 156" class="relative h-full w-full -rotate-90" aria-hidden="true">
+        <defs>
+          <linearGradient id="ring-gradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#F472B6" />
+            <stop offset="55%" stop-color="#DB2777" />
+            <stop offset="100%" stop-color="#A21CAF" />
+          </linearGradient>
+        </defs>
+        <circle cx="78" cy="78" :r="RADIUS" fill="none" stroke="var(--c-muted)" stroke-width="12" />
+        <circle
+          cx="78"
+          cy="78"
+          :r="RADIUS"
+          fill="none"
+          stroke="url(#ring-gradient)"
+          stroke-width="12"
+          stroke-linecap="round"
+          :stroke-dasharray="CIRCUMFERENCE"
+          :stroke-dashoffset="dashOffset"
+          class="origin-center"
+          :class="determinate ? 'ring-fill' : 'ring-spin'"
+        />
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center">
+        <template v-if="determinate">
+          <span class="text-gradient text-[34px] font-extrabold tabular-nums leading-none">
+            {{ pct }}<span class="text-[18px]">%</span>
+          </span>
+        </template>
+        <svg
+          v-else
+          width="34"
+          height="34"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--c-primary)"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="animate-float"
+          aria-hidden="true"
+        >
+          <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" />
+        </svg>
+      </div>
+    </div>
+
+    <p
+      class="text-center text-[16px] font-semibold"
+      :class="reconnecting ? 'text-danger' : 'text-ink'"
+      role="status"
+      aria-live="polite"
+    >
+      {{ stageText }}
+    </p>
+
+    <div class="flex w-full items-center gap-3 rounded-2xl bg-muted p-3">
       <PlatformIcon :platform="job.platform" :size="28" />
       <div class="min-w-0 flex-1">
         <h2
           id="progress-title"
           tabindex="-1"
-          class="line-clamp-2 text-[16px] font-semibold leading-snug"
+          class="line-clamp-2 text-[14px] font-semibold leading-snug"
         >
           {{ title || job.url }}
         </h2>
-        <p class="text-[13px] text-tg-hint">{{ formatLabel }}</p>
+        <p class="text-[12px] font-medium text-accent">{{ formatLabel }}</p>
       </div>
     </div>
 
-    <div class="flex flex-col gap-2">
-      <div class="flex items-baseline justify-between gap-3">
-        <p
-          class="text-[15px] font-medium"
-          :class="reconnecting ? 'text-tg-destructive' : 'text-tg-text'"
-          role="status"
-          aria-live="polite"
-        >
-          {{ stageText }}
-        </p>
-        <span v-if="determinate" class="text-[15px] font-semibold tabular-nums text-tg-hint">
-          {{ pct }}%
-        </span>
-      </div>
-      <div
-        class="relative h-2 w-full overflow-hidden rounded-full bg-tg-secondary"
-        role="progressbar"
-        :aria-label="S.stage.downloading"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        :aria-valuenow="determinate ? (pct ?? undefined) : undefined"
-        :aria-valuetext="stageText"
-      >
-        <div
-          v-if="determinate"
-          class="h-full rounded-full bg-tg-button transition-[width] duration-500 ease-out"
-          :style="{ width: `${pct}%` }"
-        />
-        <div v-else class="indeterminate absolute inset-y-0 w-1/3 rounded-full bg-tg-button" />
-      </div>
-      <p class="text-[13px] text-tg-hint">{{ S.keepOpen }}</p>
-    </div>
+    <p class="text-center text-[13px] text-hint">{{ S.keepOpen }}</p>
 
     <button type="button" class="btn-danger w-full" :disabled="cancelling" @click="$emit('cancel')">
       {{ cancelling ? S.stage.cancelling : S.cancel }}
@@ -89,24 +133,23 @@ const formatLabel = computed(() =>
 </template>
 
 <style scoped>
-.indeterminate {
-  animation: slide 1.3s ease-in-out infinite;
+.ring-fill {
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes slide {
-  0% {
-    left: -35%;
-  }
-  100% {
-    left: 100%;
+.ring-spin {
+  transform-box: fill-box;
+  animation: ring-rotate 1.1s linear infinite;
+}
+
+@keyframes ring-rotate {
+  to {
+    transform: rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .indeterminate {
-    left: 0;
-    width: 100%;
-    opacity: 0.45;
+  .ring-spin {
     animation: none;
   }
 }

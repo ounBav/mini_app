@@ -3,7 +3,7 @@ defineProps<{ rounded?: string }>()
 </script>
 
 <template>
-  <div class="skeleton bg-tg-secondary" :class="rounded ?? 'rounded-lg'" aria-hidden="true" />
+  <div class="skeleton bg-muted" :class="rounded ?? 'rounded-lg'" aria-hidden="true" />
 </template>
 
 <style scoped>

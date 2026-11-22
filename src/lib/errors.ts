@@ -133,6 +133,17 @@ export function describeError(
         title: 'Server error',
         message: 'The server had a problem. Please try again in a moment.',
       }
+    case 'E-CORS':
+      return {
+        title: 'Server blocked this app',
+        message:
+          "The server is online but doesn't allow this app's address yet. Please tell the bot admin.",
+      }
+    case 'E-CONFIG':
+      return {
+        title: 'App not set up',
+        message: "This app isn't connected to its server correctly. Please tell the bot admin.",
+      }
     case 'E-AUTH':
       return { title: 'Session expired', message: 'Close the app and open it again from the bot.' }
     case 'E-BANNED':
