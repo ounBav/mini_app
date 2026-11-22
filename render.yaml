@@ -1,0 +1,37 @@
+# Render Blueprint for the Mini App as a Static Site (free, global CDN, no server).
+# The API is the existing dlbot web service; point VITE_API_BASE_URL at it.
+services:
+  - type: web
+    name: dlbot-mini-app
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    # Single-page app: every unknown path serves index.html.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # Vite content-hashes everything under /assets, so it can be cached forever.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # index.html must always revalidate so users get a new deploy immediately.
+      - path: /
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      # No X-Frame-Options: Telegram Web (web.telegram.org) shows Mini Apps in an iframe.
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false # e.g. https://bot-webhook.onrender.com
+      - key: VITE_BOT_USERNAME
+        sync: false # optional, without @

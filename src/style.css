@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens. telegram-web-app.js sets --tg-theme-* on <html> and updates them on themeChanged,
+ * so every tg-* Tailwind class follows the user's Telegram theme live. The fallbacks are
+ * Telegram's default light / dark palettes, used when developing in a normal browser.
+ */
+:root {
+  --c-bg: var(--tg-theme-bg-color, #ffffff);
+  --c-secondary: var(--tg-theme-secondary-bg-color, #f1f1f4);
+  --c-section: var(--tg-theme-section-bg-color, var(--c-bg));
+  --c-text: var(--tg-theme-text-color, #000000);
+  --c-hint: var(--tg-theme-hint-color, #8e8e93);
+  --c-subtitle: var(--tg-theme-subtitle-text-color, var(--c-hint));
+  --c-link: var(--tg-theme-link-color, #2481cc);
+  --c-accent: var(--tg-theme-accent-text-color, var(--c-link));
+  --c-button: var(--tg-theme-button-color, #2481cc);
+  --c-button-text: var(--tg-theme-button-text-color, #ffffff);
+  --c-destructive: var(--tg-theme-destructive-text-color, #e53935);
+  --c-separator: var(--tg-theme-section-separator-color, rgba(0, 0, 0, 0.1));
+  --c-button-soft: rgba(36, 129, 204, 0.12);
+  --c-destructive-soft: rgba(229, 57, 53, 0.12);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --c-bg: var(--tg-theme-bg-color, #17212b);
+  --c-secondary: var(--tg-theme-secondary-bg-color, #0e1621);
+  --c-text: var(--tg-theme-text-color, #f5f5f5);
+  --c-hint: var(--tg-theme-hint-color, #708499);
+  --c-link: var(--tg-theme-link-color, #6ab3f3);
+  --c-button: var(--tg-theme-button-color, #5288c1);
+  --c-button-text: var(--tg-theme-button-text-color, #ffffff);
+  --c-destructive: var(--tg-theme-destructive-text-color, #ec3942);
+  --c-separator: var(--tg-theme-section-separator-color, rgba(255, 255, 255, 0.08));
+  --c-button-soft: rgba(82, 136, 193, 0.18);
+  --c-destructive-soft: rgba(236, 57, 66, 0.16);
+  color-scheme: dark;
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  :root,
+  :root[data-theme='dark'] {
+    --c-button-soft: color-mix(in srgb, var(--c-button) 14%, transparent);
+    --c-destructive-soft: color-mix(in srgb, var(--c-destructive) 14%, transparent);
+  }
+}
+
+@layer base {
+  html,
+  body {
+    @apply bg-tg-secondary text-tg-text antialiased;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: var(--tg-viewport-stable-height, 100vh);
+    overscroll-behavior-y: none;
+    /* Device safe area + Telegram's own header in fullscreen mode (Bot API 8.0). */
+    padding-top: calc(
+      var(--tg-safe-area-inset-top, env(safe-area-inset-top, 0px)) +
+        var(--tg-content-safe-area-inset-top, 0px)
+    );
+    padding-bottom: calc(
+      var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) +
+        var(--tg-content-safe-area-inset-bottom, 0px)
+    );
+    padding-left: calc(
+      var(--tg-safe-area-inset-left, 0px) + var(--tg-content-safe-area-inset-left, 0px)
+    );
+    padding-right: calc(
+      var(--tg-safe-area-inset-right, 0px) + var(--tg-content-safe-area-inset-right, 0px)
+    );
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-tg-button ring-offset-2 ring-offset-tg-secondary;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-tg-section;
+  }
+
+  .btn {
+    @apply inline-flex min-h-tap items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-semibold transition-opacity active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-tg-button text-tg-button-text;
+  }
+
+  .btn-soft {
+    @apply btn bg-tg-button-soft text-tg-link;
+  }
+
+  .btn-ghost {
+    @apply btn text-tg-link;
+  }
+
+  .btn-danger {
+    @apply btn bg-tg-destructive-soft text-tg-destructive;
+  }
+
+  .section-label {
+    @apply px-4 pb-1.5 text-[13px] font-medium uppercase tracking-wide text-tg-hint;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
