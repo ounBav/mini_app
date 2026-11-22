@@ -89,7 +89,11 @@ const mainButton = computed<MainButtonConfig | null>(() => {
       if (store.job?.file) {
         return fileExpired.value
           ? { text: S.tryAgain, loading: store.creating, onClick: store.startDownload }
-          : { text: S.saveToDevice, onClick: store.save }
+          : {
+              // With a Gallery button on screen, call this one what it is: Files/Downloads.
+              text: store.galleryMode === 'share' ? S.saveToFiles : S.saveToDevice,
+              onClick: store.save,
+            }
       }
       return { text: S.another, onClick: store.reset }
     case 'error': {
@@ -205,8 +209,13 @@ const usage = computed(() =>
         :job="store.job"
         :now="now"
         :can-open-chat="tg.hasBotLink"
+        :gallery-mode="store.galleryMode"
+        :gallery-state="store.galleryState"
+        :busy="store.creating"
         @another="store.reset"
         @open-chat="tg.openBotChat"
+        @save-gallery="store.saveToGallery"
+        @send-to-chat="store.sendToChat"
       />
 
       <ErrorState

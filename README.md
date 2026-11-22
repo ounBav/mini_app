@@ -148,6 +148,26 @@ Set `VITE_API_BASE_URL` in the project's environment variables, and `MINIAPP_URL
    only needed if you leave `MINIAPP_URL` empty.
 3. Open the bot in Telegram and tap the menu button.
 
+## Save to Gallery
+
+`WebApp.downloadFile` saves into Downloads / Files, never into the photo gallery, so video jobs
+get an extra button on the done screen:
+
+| Webview                                                            | What the button does                                                                            | Where the video ends up             |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Can share files (`navigator.canShare({files})`, e.g. Telegram iOS) | Downloads the file into memory as soon as it is ready, then opens the system share sheet on tap | **Save Video** → Photos             |
+| No file sharing (Android WebView, Telegram Desktop)                | Starts the same download with `delivery: "chat"`, so the bot sends the video to the chat        | ⋯ → **Save to Gallery** in Telegram |
+
+Notes:
+
+- The share sheet needs a direct tap, so it is an in-page button. Telegram's MainButton stays
+  **Save to Files** (`downloadFile`).
+- The in-memory copy needs the Mini App's origin in dlbot's CORS list (`MINIAPP_URL`). If the
+  prefetch fails, the app falls back to the chat route.
+- The chat route re-runs the download on the server (Telegram upload) and counts against the daily
+  limit. If the user never pressed Start in the bot chat, dlbot answers `E-NOCHAT` and the app
+  asks them to start the bot.
+
 ## Cold starts (Render free plan)
 
 The free dlbot instance sleeps after 15 idle minutes. When the first request takes more than
@@ -187,5 +207,8 @@ Run in Telegram iOS, Android and Desktop, in both light and dark themes.
 - [ ] Reduce Motion on: no shimmer, spinner or sliding bar animation.
 - [ ] Telegram Web (web.telegram.org/k or /a): Save to device downloads the file. If it fails
       there, add `https://web.telegram.org` to dlbot's `CORS_ORIGINS`.
-#   m i n i _ a p p  
- 
+- [ ] **Save to Gallery, iOS**: on the done screen the button shows "Preparing for Gallery…",
+      then "Save to Gallery" → share sheet → **Save Video** → the video is in Photos.
+- [ ] **Save to Gallery, Android / Desktop**: "Save to Gallery via chat" → the bot sends the video
+      to the chat → open it → ⋯ → **Save to Gallery**. This counts as one more download today.
+- [ ] Audio (MP3) shows no Gallery button.

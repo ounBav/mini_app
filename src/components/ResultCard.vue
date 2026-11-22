@@ -2,17 +2,34 @@
 import { computed } from 'vue'
 import { formatBytes, formatWait } from '@/lib/format'
 import { S } from '@/lib/strings'
+import type { GalleryMode, GalleryState } from '@/stores/download'
 import type { Job } from '@/types/api'
+import Spinner from './Spinner.vue'
 
-const props = defineProps<{ job: Job | null; now: number; canOpenChat: boolean }>()
-defineEmits<{ another: []; openChat: [] }>()
+const props = defineProps<{
+  job: Job | null
+  now: number
+  canOpenChat: boolean
+  galleryMode: GalleryMode
+  galleryState: GalleryState
+  busy: boolean
+}>()
+defineEmits<{ another: []; openChat: []; saveGallery: []; sendToChat: [] }>()
 
 const file = computed(() => props.job?.file ?? null)
 const toChat = computed(() => !props.job || props.job.delivery === 'chat')
+const isVideo = computed(() => !props.job || props.job.format === 'video')
 const secondsLeft = computed(() =>
   file.value ? Math.max(0, (Date.parse(file.value.expires_at) - props.now) / 1000) : 0,
 )
 const expired = computed(() => !!file.value && secondsLeft.value <= 0)
+/** A prepared video can still be shared after the server link expired: it is in memory. */
+const showShare = computed(
+  () =>
+    props.galleryMode === 'share' &&
+    props.galleryState !== 'failed' &&
+    (!expired.value || props.galleryState === 'ready'),
+)
 </script>
 
 <template>
@@ -54,7 +71,9 @@ const expired = computed(() => !!file.value && secondsLeft.value <= 0)
         <p class="break-words text-[15px] font-medium">{{ file.name }}</p>
         <p class="text-[14px] tabular-nums text-tg-hint">{{ formatBytes(file.size) }}</p>
       </template>
-      <p v-else-if="toChat" class="text-[15px] text-tg-hint">{{ S.sentBody }}</p>
+      <p v-else-if="toChat" class="text-[15px] text-tg-hint">
+        {{ isVideo ? S.chatGalleryNext : S.sentBody }}
+      </p>
     </div>
 
     <p
@@ -67,6 +86,58 @@ const expired = computed(() => !!file.value && secondsLeft.value <= 0)
     </p>
 
     <div class="flex w-full flex-col gap-2">
+      <!-- iOS & other webviews with file sharing: share sheet → "Save Video" (Photos). -->
+      <template v-if="showShare">
+        <button
+          type="button"
+          class="btn-primary w-full"
+          :disabled="galleryState !== 'ready'"
+          :aria-busy="galleryState === 'loading'"
+          @click="$emit('saveGallery')"
+        >
+          <Spinner v-if="galleryState === 'loading'" :size="18" class="!text-tg-button-text" />
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="16"
+              rx="3"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
+            <path
+              d="m3.5 17 5-5 4 4 2.5-2.5L20.5 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <circle cx="15.5" cy="8.5" r="1.6" fill="currentColor" />
+          </svg>
+          {{ galleryState === 'loading' ? S.preparingGallery : S.saveToGallery }}
+        </button>
+        <p class="text-[12px] text-tg-hint">{{ S.galleryShareHint }}</p>
+      </template>
+      <p
+        v-else-if="galleryMode === 'share' && galleryState === 'failed'"
+        class="text-[13px] text-tg-hint"
+      >
+        {{ S.galleryPrepareFailed }}
+      </p>
+
+      <!-- Android WebView / Desktop: no file sharing, so go through the bot chat. -->
+      <template
+        v-if="galleryMode === 'chat' || (galleryMode === 'share' && galleryState === 'failed')"
+      >
+        <button type="button" class="btn-soft w-full" :disabled="busy" @click="$emit('sendToChat')">
+          <Spinner v-if="busy" :size="18" />
+          {{ S.sendToChatGallery }}
+        </button>
+        <p class="text-[12px] text-tg-hint">{{ S.galleryChatHint }}</p>
+      </template>
+
       <button
         v-if="toChat && canOpenChat"
         type="button"

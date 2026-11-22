@@ -16,10 +16,12 @@ import { WAKE_UP_AFTER_MS, WAKE_UP_DEADLINE_MS } from '@/config'
 import { describeError, type ErrorView } from '@/lib/errors'
 import { defaultQuality, lowerQuality } from '@/lib/format'
 import { clearSession, loadSession, saveSession } from '@/lib/session'
+import { canShareFiles, fetchAsFile } from '@/lib/share'
 import { S } from '@/lib/strings'
 import { checkLink, DEFAULT_PLATFORMS } from '@/lib/url'
 import {
   FINAL_STATUSES,
+  type Delivery,
   type ErrorCode,
   type InfoResponse,
   type Job,
@@ -33,6 +35,8 @@ export type Step = 'input' | 'preview' | 'progress' | 'done' | 'error'
 export type Phase = 'booting' | 'waking' | 'ready' | 'offline' | 'auth' | 'banned'
 /** Which operation produced the current error (decides what "Try again" repeats). */
 export type FailedOp = 'info' | 'download' | 'job'
+export type GalleryMode = 'share' | 'chat' | 'none'
+export type GalleryState = 'idle' | 'loading' | 'ready' | 'failed'
 
 export interface AppError {
   code: ErrorCode
@@ -62,6 +66,8 @@ export const useDownloadStore = defineStore('download', () => {
   const quality = ref<Quality | null>(null)
   const job = shallowRef<Job | null>(null)
   const creating = ref(false)
+  /** Delivery of the last created job, so "Try again" repeats the same kind. */
+  const lastDelivery = ref<Delivery>('device')
   const cancelling = ref(false)
   const error = shallowRef<AppError | null>(null)
   const errorBackStep = ref<Step>('input')
@@ -302,20 +308,24 @@ export const useDownloadStore = defineStore('download', () => {
   }
 
   // ------------------------------------------------------------------ download
-  async function startDownload(): Promise<void> {
+  /**
+   * Create a download job. `delivery: 'chat'` makes the bot send the file to the user's chat
+   * (used by "Save to Gallery" where the webview cannot share files). Defaults to the device link.
+   */
+  async function startDownload(opts?: { delivery?: Delivery }): Promise<void> {
     const url = sourceUrl.value
     if (!url || creating.value) return
+    const delivery: Delivery = opts?.delivery === 'chat' ? 'chat' : 'device'
+    lastDelivery.value = delivery
     creating.value = true
     error.value = null
     const fmt = format.value
     const q = fmt === 'video' ? quality.value : null
     try {
-      const res = await withWake(() =>
-        createDownload({ url, format: fmt, quality: q, delivery: 'device' }),
-      )
+      const res = await withWake(() => createDownload({ url, format: fmt, quality: q, delivery }))
       if (me.value) me.value = { ...me.value, usage_today: me.value.usage_today + 1 }
       if (res.id === null) {
-        // Served from the chat file_id cache (never for device delivery, kept for completeness).
+        // Chat delivery served instantly from the bot's file_id cache.
         job.value = null
         step.value = 'done'
         tg.haptic('success')
@@ -330,7 +340,7 @@ export const useDownloadStore = defineStore('download', () => {
         error_code: null,
         title: info.value?.title ?? null,
         created_at: new Date().toISOString(),
-        delivery: 'device',
+        delivery,
         quality: q,
         progress: null,
         file: null,
@@ -355,8 +365,78 @@ export const useDownloadStore = defineStore('download', () => {
     }
   }
 
+  /** Send the current video to the bot chat, where Telegram's "Save to Gallery" works. */
+  function sendToChat(): Promise<void> {
+    return startDownload({ delivery: 'chat' })
+  }
+
+  // ------------------------------------------------------------------ save to gallery
+  /** 'share': system share sheet ("Save Video"); 'chat': via the bot chat; 'none': not a video. */
+  const galleryMode = computed<GalleryMode>(() => {
+    const j = job.value
+    if (!j || j.format !== 'video' || j.delivery !== 'device' || !j.file) return 'none'
+    return canShareFiles() ? 'share' : 'chat'
+  })
+  const galleryState = ref<GalleryState>('idle')
+  const galleryFile = shallowRef<File | null>(null)
+  let galleryCtrl: AbortController | null = null
+  let galleryFor: string | null = null
+
+  function resetGallery(): void {
+    galleryCtrl?.abort()
+    galleryCtrl = null
+    galleryFor = null
+    galleryFile.value = null
+    galleryState.value = 'idle'
+  }
+
+  /** Prefetch the file while the user reads the done screen: the share sheet must open on tap. */
+  async function prepareGallery(): Promise<void> {
+    const file = job.value?.file
+    const id = job.value?.id ?? null
+    if (galleryMode.value !== 'share' || !file || !id || galleryFor === id) return
+    resetGallery()
+    galleryFor = id
+    galleryState.value = 'loading'
+    const ctrl = new AbortController()
+    galleryCtrl = ctrl
+    try {
+      const prepared = await fetchAsFile(fileUrl(file.download_path), file.name, ctrl.signal)
+      if (galleryFor !== id) return
+      galleryFile.value = prepared
+      galleryState.value = 'ready'
+    } catch {
+      if (galleryFor === id && !ctrl.signal.aborted) galleryState.value = 'failed'
+    } finally {
+      if (galleryCtrl === ctrl) galleryCtrl = null
+    }
+  }
+
+  watch(galleryMode, (mode) => (mode === 'share' ? void prepareGallery() : undefined))
+
+  /**
+   * Open the share sheet with the prepared video. Called straight from a tap: navigator.share
+   * needs the user gesture, so nothing is awaited before it.
+   */
+  function saveToGallery(): void {
+    const prepared = galleryFile.value
+    if (!prepared) {
+      void save()
+      return
+    }
+    navigator
+      .share({ files: [prepared], title: prepared.name })
+      .then(() => tg.haptic('success'))
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return // sheet dismissed
+        showToast(S.galleryFailed)
+        void save()
+      })
+  }
+
   /** Single entry point for every job update (create, poll, restore). */
   function applyJob(next: Job, opts: { quiet?: boolean } = {}): void {
+    if (job.value?.id !== next.id) resetGallery()
     job.value = next
     format.value = next.format
     if (next.format === 'video' && next.quality != null) quality.value = next.quality as Quality
@@ -439,6 +519,7 @@ export const useDownloadStore = defineStore('download', () => {
     touched.value = false
     info.value = null
     job.value = null
+    resetGallery()
     error.value = null
     cancelling.value = false
     format.value = 'video'
@@ -474,7 +555,7 @@ export const useDownloadStore = defineStore('download', () => {
       error.value = null
       step.value = 'progress' // pollingJobId becomes non-null, the view restarts polling
     } else {
-      void startDownload()
+      void startDownload({ delivery: lastDelivery.value })
     }
   }
 
@@ -517,6 +598,8 @@ export const useDownloadStore = defineStore('download', () => {
     nextLowerQuality,
     pollingJobId,
     errorView,
+    galleryMode,
+    galleryState,
     // actions
     boot,
     setInput,
@@ -524,6 +607,8 @@ export const useDownloadStore = defineStore('download', () => {
     setFormat,
     setQuality,
     startDownload,
+    sendToChat,
+    saveToGallery,
     applyJob,
     onPollError,
     cancel,

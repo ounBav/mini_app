@@ -159,5 +159,6 @@ export function isRetryable(code: ErrorCode | string): boolean {
     'E-EXPIRED',
     'E-RATELIMIT',
     'E-GONE',
+    'E-NOCHAT', // succeeds once the user taps Start in the bot chat
   ].includes(code)
 }
